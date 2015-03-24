@@ -2,31 +2,33 @@ var pg           = require('pg'),
     _            = require('lodash'),
     async        = require('asyncjs');
 
-function query(query) {
-	this.db = null;
+function query(query, db_name) {
+	db_name = db_name || 'database1';
 
 	this.init = function(context, callback) {
-		if (!context.config.database1) {
-			throw "Require database1 config key";
+		if (!context.config[db_name]) {
+			throw "Require " + db_name + " config key";
 		}
-		var dburl = context.config.database1;
+		var dburl = context.config[db_name];
 		if (dburl.indexOf('?') == -1 && dburl.indexOf('localhost') == -1) {
 			dburl = dburl + "?ssl=true";
 		}
 		pg.connect(dburl, function(err, client, done) {
-			this.db = client;
-			callback(err);
-		});
+			context[db_name] = client;
+			if (callback) {
+				callback(err);
+			}
+		}.bind(this));
 	}
 
 	this.run = function(msgs, context, callback) {
-		this.db.query(query, function(err, result) {
+		context[db_name].query(query, function(err, result) {
 			callback(err, result.rows);
 		});
 	}
 
 	this.close = function(context) {
-		this.db.end();
+		context[db_name].end();
 	}
 }
 

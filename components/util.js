@@ -7,6 +7,11 @@ function debugnode() {
 	return debugnode;
 }
 
+function print(msg) {
+	console.log(msg);
+}
+
 module.exports = {
-	debugnode: debugnode
+	debugnode: debugnode,
+	print: print
 }

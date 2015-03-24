@@ -16,8 +16,8 @@ function Pipeline() {
 		this.comps.push(cfunc);
 	}
 
-	this.debugRun = function(inf) {
-		console.log("Running component: '", inf.name, "'");
+	this.debugRun = function(info) {
+		//console.log("Running component: '", info.name, "'");
 	}
 
 	this.reportError = function(info, e) {
@@ -67,31 +67,34 @@ function Pipeline() {
 		from = from || 0;
 		for (var index = from; index < this.comps.length; index++) {
 			var comp = this.comps[index];
-			if (_.isFunction(comp.run)) {
-				comp = comp.run;
-			}
 			var info = fninfo(comp);
+			var action = comp;
+			if (_.isFunction(comp.run)) {
+				action = comp.run;
+				info.name = fninfo(comp).name;
+			}
+			info = fninfo(action);
 			if (info.params.length >= 3) {
-				return this.runAsync(comp, index, info);
-			} else if (info.params.length == 2) {
+				return this.runAsync(comp, action, index, info);
+			} else if (info.params.length == 2 || info.params.length == 0) {
 				this.debugRun(info);
 				try {
-					this.consumeResult(info, null, comp(this.msgs, this.context));
+					this.consumeResult(info, null, action.call(comp, this.msgs, this.context));
 				} catch(e) {
 					this.reportError(info, e);
 				}
 			} else {
 				_.map(this.msgs, function(msg) {
-					return comp(msg) || msg;
+					return action.call(comp, msg) || msg;
 				});
 			}
 		}
 		this.close();
 	}
 
-	this.runAsync = function(comp, index, info) {
+	this.runAsync = function(comp, action, index, info) {
 		this.debugRun(info);
-		comp(this.msgs, this.context, function(err, msgs) {
+		action.call(comp, this.msgs, this.context, function(err, msgs) {
 			this.consumeResult(info, err, msgs);
 			this.runFrom(null, index+1);
 		}.bind(this))
@@ -100,9 +103,9 @@ function Pipeline() {
 	this.close = function() {
 		this.comps.forEach(function(comp) {
 			if (_.isFunction(comp.close)) {
-				comp.close();
+				comp.close(this.context);
 			}
-		});
+		}.bind(this));
 	}
 }
 
