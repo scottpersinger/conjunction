@@ -9,13 +9,16 @@ transform messages.
 
 ## Example
 
-This simple pipeline prints 'hello world', then queries rows from a table and prints each one.
+This simple pipeline adds the string 'hello world' as a message, plus the rows from querying a table,
+then prints all messages.
 
 ```javascript
 p = new Pipeline();
-p.use(util.print('hello world'));
-p.use(database.query('select * from users'));
-p.use(util.print());
+p.use(function() {
+	return 'hello world';
+});
+p.use(new database.query('select * from mirror_herokuuser', 'database1'));
+p.use(util.print);
 
 p.trigger(triggers.once);
 p.run()
@@ -54,3 +57,28 @@ The 3 parameter form allows components to work asynchronously. On completion the
 the `callback` parameter indicating any error or result value. If an array is supplied for
 the `msgs` callback parameter then those values will replace the values input values in the pipeline.
 
+## Messages
+
+Messages are simple JSON objects passed through the pipeline. For efficiency messages are passed
+as a single input to the component, except for single-arg components where each message will be
+passed in individually.
+
+## Async components
+
+Asynchronous components may invoke their callback multiple times, in which case the remainder
+of the pipeline will be executed for each call. This is useful for components which may generate
+a lot of data, like a database query, so that the pipeline can operate on batches of results
+rather than having to buffer the entire result set.
+
+## Triggers
+
+A pipeline must be started with a **trigger**. Triggers activate the pipeline, and may supply
+0 or more initial messages. The `once` trigger is good for run-once scripts, while the `timer`
+trigger can run a pipeline on an interval. The `http_get` and `http_post` triggers are activated
+by HTTP calls and will provide their inputs as message(s) to the pipeline.
+
+## Configuration
+
+By convention the `context` argument contains a `config` key with global configuration. Call
+`Pipeline.configure(config)` to set the configuration on the pipeline. Components may
+save values they want to re-use  (such as a db connection) on the `context` for later use.
