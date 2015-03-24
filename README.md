@@ -7,6 +7,20 @@ component to the next.
 Components are simply functions which can add messages to the pipeline, remove messages, or
 transform messages.
 
+## Example
+
+This simple pipeline prints 'hello world', then queries rows from a table and prints each one.
+
+```javascript
+p = new Pipeline();
+p.use(util.print('hello world'));
+p.use(database.query('select * from users'));
+p.use(util.print());
+
+p.trigger(triggers.once);
+p.run()
+```
+
 ## Component signatures
 
 ```javascript
