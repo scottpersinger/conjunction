@@ -1,0 +1,19 @@
+{
+  "name": "conjunction",
+  "version": "1.0.0",
+  "description": "Simple ETL framework",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Scott Persinger",
+  "license": "ISC",
+  "dependencies": {
+    "asyncjs": "0.0.9",
+    "fninfo": "^2.1.0",
+    "knex": "^0.7.6",
+    "lodash": "^3.5.0",
+    "pg": "^4.3.0",
+    "pg-hstore": "^2.3.1"
+  }
+}
