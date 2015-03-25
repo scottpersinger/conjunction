@@ -2,10 +2,8 @@ var http        = require('http'),
     express     = require('express');
     bodyParser  = require('body-parser')
 
-function once(context, callback, shutdown) {
-	callback(function() {;
-		shutdown();
-	});
+function once(callback) {
+	callback();
 }
 
 function timer(options) {

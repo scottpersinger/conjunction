@@ -1,11 +1,13 @@
-Pipeline = require('conjunction');
-database = require('conjunction/components/database');
-util = require('conjunction/components/util');
+module.exports = function(config) {
+	Pipeline = require('conjunction');
+	database = require('conjunction/components/database');
+	util = require('conjunction/components/utilcomps');
 
-p = new Pipeline();
-p.use(function() {
-	return 'hello world';
-});
-p.use(util.print);
+	p = new Pipeline();
+	p.use(new util.Push(function() {
+		return 'hello world';
+	}));
+	p.use(new util.Logger());
 
-module.exports = p;
+	return p;
+}
