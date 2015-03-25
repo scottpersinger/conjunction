@@ -1,69 +1,68 @@
-var pg           = require('pg'),
+var klib         = require('knex'),
     _            = require('lodash'),
     async        = require('asyncjs');
 
-function query(query, db_name) {
-	db_name = db_name || 'database1';
+
+// Database connection component.
+function connection(db_name) {
+	this.db_name = db_name || 'database1';
 
 	this.init = function(context, callback) {
-		if (!context.config[db_name]) {
-			throw "Require " + db_name + " config key";
+		if (!context.config[this.db_name]) {
+			throw "Require " + this.db_name + " config key";
 		}
-		var dburl = context.config[db_name];
+		var dburl = context.config[this.db_name];
 		if (dburl.indexOf('?') == -1 && dburl.indexOf('localhost') == -1) {
 			dburl = dburl + "?ssl=true";
 		}
-		pg.connect(dburl, function(err, client, done) {
-			context[db_name] = client;
-			if (callback) {
-				callback(err);
-			}
-		}.bind(this));
+		var knex = klib({client:'pg', connection:dburl});
+		context[this.db_name] = knex;
+		if (callback) {
+			callback();
+		}
 	}
 
-	this.run = function(msgs, context, callback) {
-		context[db_name].query(query, function(err, result) {
-			callback(err, result.rows);
-		});
+	this.run = function(msgs, callback) {
 	}
 
 	this.close = function(context) {
-		context[db_name].end();
+		context[this.db_name].destroy();
 	}
 }
 
-function del(table, where) {
+function query(query, db_name) {
 	this.run = function(msgs, context, callback) {
-		var sql = 'DELETE FROM ' + table + '';
-		if (where) {
-			sql += " WHERE " + where;
-		}
-		this.db.query(sql, function(err, result) {
+		context[this.db_name].raw(query).then(function(result) {
+			callback(null, result.rows);
+		}).catch(function(err) {
 			callback(err);
 		});
 	}
+
 }
+query.prototype = new connection();
+
+function del(table, where) {
+	this.run = function(msgs, context, callback) {
+		context[this.db_name].raw("DELETE FROM " + table + (where ? (" WHERE " + where) : '')).then(function(row_count) {
+			callback();
+		}).catch(callback);
+	}
+}
+del.prototype = new query();
 
 function insert(table) {
 	this.run = function(msgs, context, callback) {
 		// Construct an insert assuming the properties of the object equal the column names
+		var db_name = this.db_name;
+
 		function insert_record(msg, callback) {
-			console.log("INSERT ", msg);
-			var sql = 'INSERT INTO ' + table + ' ';
-			var cols = [];
-			var symbols = [];
-			var vals = [];
-			_.forIn(msg, function(value, key) {
-				if (key == '_headers') {
-					next;
-				}
-				cols.push(key);
-				symbols.push('$' + (symbols.length+1));
-				vals.push(value);
+			context[db_name](table).insert(msg, 'id').then(function(rowid) {
+				msg.id = rowid;
+				callback();
+			}).catch(function(err) {
+				callback(err);
 			});
-			sql = sql + "(" + cols.join(",") + ") VALUES (" + symbols.join(",") + ")";
-			console.log("[sql] ", sql);
-			db.query(sql, vals, callback);
 		}
 		async.map(msgs, insert_record, function(err, results) {
 			callback(err);
@@ -73,6 +72,7 @@ function insert(table) {
 insert.prototype = new query();
 
 module.exports = {
+	connection: connection,
 	query: query,
 	insert: insert,
 	del: del

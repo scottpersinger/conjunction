@@ -7,5 +7,7 @@ if (process.argv.length < 3) {
 p = require('./pipelines/' + process.argv[2]);
 p.configure(require('./pipelines/config.js'));
 
-p.trigger(Triggers.once);
+if (p.triggers.length == 0) {
+	p.trigger(Triggers.once);
+}
 p.run();

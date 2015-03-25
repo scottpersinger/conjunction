@@ -3,9 +3,13 @@ var fninfo       = require('fninfo'),
     async        = require('asyncjs');
 
 function Pipeline() {
+	this.log = function() {
+		console.log(arguments);
+	}
+
 	this.comps = [];
 	this.msgs = [];
-	this.context = {config: {}};
+	this.context = {config: {}, log: this.log};
 	this.triggers = [];
 
 	this.trigger = function(trigger) {
@@ -22,6 +26,7 @@ function Pipeline() {
 
 	this.reportError = function(info, e) {
 		console.log("Component '", info.name, "' error: ", e);
+		console.log(e.stack);
 	}
 
 	this.configure = function(config) {
@@ -50,10 +55,15 @@ function Pipeline() {
 				console.log("Component init error: ", err, ", pipeline aborted.");
 			} else {
 				this.triggers.forEach(function(trigger) {
-					trigger(_.bind(this.runFrom, this));
+					trigger(this.context, _.bind(this.startRun, this), _.bind(this.close, this));
 				}.bind(this));
 			}
 		}.bind(this));
+	}
+
+	this.startRun = function(pipedone_callback) {
+		this.pipedone_callback = pipedone_callback;
+		this.runFrom();
 	}
 
 	this.runFrom = function(msgs, from) {
@@ -89,7 +99,9 @@ function Pipeline() {
 				});
 			}
 		}
-		this.close();
+		if (_.isFunction(this.pipedone_callback)) {
+			this.pipedone_callback();
+		}
 	}
 
 	this.runAsync = function(comp, action, index, info) {

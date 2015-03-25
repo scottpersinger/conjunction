@@ -10,6 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "asyncjs": "0.0.9",
+    "body-parser": "^1.12.2",
+    "express": "^4.12.3",
     "fninfo": "^2.1.0",
     "knex": "^0.7.6",
     "lodash": "^3.5.0",
