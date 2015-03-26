@@ -1,6 +1,7 @@
 var util = require('util');
 var Stream = require('stream');
 var _ = require('lodash');
+var fninfo = require('fninfo');
 
 util.inherits(Logger, Stream.Transform);
 
@@ -20,21 +21,54 @@ util.inherits(Mapper, Stream.Transform);
 function Mapper(f) {
 	this.constructor.super_.call(this, {objectMode:true});
 	this.f = f;
+	this.useCallback = fninfo(f).params.length == 3;
 
-	this._transform = function(chunk, encoding, callback) {
-		this.push(this.f(chunk));
-		callback();
+	this.init = function(context) {
+		this.context = context;
+	}
+
+	this._transform = function(msg, encoding, callback) {
+		if (this.useCallback) {
+			this.f(msg, this.context, function(msg, more_coming) {
+				this.push(msg);
+				if (!more_coming) {
+					callback();
+				}
+			}.bind(this));
+ 		} else {
+			this.push(this.f(msg, this.context));
+			callback();
+		}
 	}
 }
 
-util.inherits(Push, Stream.Readable);
+util.inherits(Push, Stream.Duplex);
 
-function Push(f) {
+function Push(f, key) {
 	if (!this.constructor.super_) {
 		throw "Please construct the Push component with 'new' operator";
 	}
 	this.constructor.super_.call(this, {objectMode:true});
-	this.msgs = [_.isFunction(f) ? f() : f];
+	this.msgs = _.flatten([_.isFunction(f) ? f() : f]);
+
+	this._write = function(msg, encoding, callback) {
+		this.msgs.unshift(msg);
+		callback();
+	}
+
+	this._read = function() {
+		this.push(this.msgs.shift() || null);
+	}
+}
+
+util.inherits(Start, Stream.Readable);
+
+function Start() {
+	if (!this.constructor.super_) {
+		throw "Please construct the Start component with 'new' operator";
+	}
+	this.constructor.super_.call(this, {objectMode:true});
+	this.msgs = [{}];
 
 	this._read = function() {
 		this.push(this.msgs.pop() || null);
@@ -44,5 +78,6 @@ function Push(f) {
 module.exports = {
 	Logger: Logger,
 	Mapper: Mapper,
-	Push: Push
+	Push: Push,
+	Start: Start
 }

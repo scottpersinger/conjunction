@@ -6,6 +6,7 @@ var _            = require('lodash'),
 function Pipeline(config) {
 	this.comps = [];
 	this.context = {config: config};
+	this.help = this.constructor.help;
 
 	this.use = function(c) {
 		if (c === undefined) {
@@ -32,10 +33,30 @@ function Pipeline(config) {
 			})
 		}.bind(this), this.context);
 	}
+
+	this.toString = function() {
+		return "Pipeline: \n" +
+			_.map(this.comps, function(c, idx) {return (idx+1) + ": " + c}).join("\n");
+	}
 }
 
-Pipeline.help = "Pipelines hold and execute a series of components, implicitly \
-passing data between each component. To use a Pipeline, add components to the \
-pipeline, then add a trigger to start the pipeline, then call 'run'.";	
+Pipeline.help = function() {
+	console.log("Pipelines hold and execute a series of components, implicitly \n\
+passing data between each component. To use a Pipeline, add components to the \n\
+pipeline, then add a trigger to start the pipeline, then call 'run' \n\
+\n\
+Example:\n\
+\n\
+  config = {...};\n\
+  Pipeline = require('conjunction');\n\
+  triggers = require('conjunction/triggers');\n\
+  util = require('conjunction/components/utilcomps');\n\
+  \n\
+  p = new Pipeline(config);\n\
+  p.use(new util.Push('hello world'));\n\
+  p.use(new util.Logger());\n\
+  p.run(triggers.once);\n\
+");
+}	
 
 module.exports = Pipeline;
