@@ -56,6 +56,8 @@ Example:\n\
   p.use(new util.Push('hello world'));\n\
   p.use(new util.Logger());\n\
   p.run(triggers.once);\n\
+\n\
+  Run 'Pipeline.help_components()' for a description of standard components.\n\
 ");
 }	
 

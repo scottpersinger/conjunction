@@ -1,76 +1,118 @@
-# conjunction
+# Duality
 
-Conjunction allows simple construction of data pipelines for moving and transforming data. 
-Each pipeline is assembled as a sequence of components. Data messages pass automatically from each
-component to the next.
+Duality is a framework for writing and running data transformation pipelines. Pipelines
+are built from components that use the Node.js Streams system to move data down the
+pipeline, enriching or transforming it as it goes.
 
-Components are simply functions which can add messages to the pipeline, remove messages, or
-transform messages.
+Duality makes it easy to create, run, and manage pipeline scripts. It offers sensible
+conventions to make it easy to manage and maintain a large library of scripts.
 
 ## Example
 
-This simple pipeline adds the string 'hello world' as a message, plus the rows from querying a table,
-then prints all messages.
+This simple pipeline queries contact records from a database, and splits each record 
+into separate 'person' and 'company' records, then inserts the results into a
+second database.
 
 ```javascript
 p = new Pipeline();
-p.use(function() {
-	return 'hello world';
+p.use(new database.Query('select * from contacts'));
+p.use(function(contact) {
+	var companyId = GUID();
+	return [
+		{
+			_headers: {type: 'person'},
+			email: contact.email,
+			name: contact.firstname + ' ' + contact.lastname
+			company_id: companyId
+		},
+		{
+			_headers: {type: 'company'},
+			name: contact.compnay_name,
+			guid: companyId
+		}
+	]
 });
-p.use(new database.query('select * from mirror_herokuuser', 'database1'));
-p.use(util.print);
+p.use(util.Logger());
+p.use(new database.insert(null, 'database1'));
 
-p.trigger(triggers.once);
 p.run()
 ```
 
-## Component signatures
+## Features
 
-```javascript
-function mycomp(msg) {
-  // modify 'msg' or return a new value to replace it
-}
-```
-
-In the simplest form, a component takes a single `msg` argument. Each message in the pipeline will be
-passed into the component. The component may modify the message, or return a new message to replace
-it.
-
-```javascript
-function mycomp(msgs, context) {
-  // process array of messages
-  // modify msgs in place, or return a new array to replace them
-}
-```
-With this signature the component will be passed a batch of messages on each invocation. The component 
-can modify the messages in place, or return a new array to replace all the input messages in the pipeline.
-
-The `context` variable contains context information which is global the pipeline.
-
-```javascript
-function mycomp(msgs, context, callback) {
-  // You must invoke callback(err, msgs) to continue
-}
-```
-
-The 3 parameter form allows components to work asynchronously. On completion they should invoke
-the `callback` parameter indicating any error or result value. If an array is supplied for
-the `msgs` callback parameter then those values will replace the values input values in the pipeline.
+* Efficient data flow based on Node Streams
+* Toolbox of useful input, output, and transform components
+* Easy configuration system
+* Simple syntax for creating pipelines
+* Easily create new, re-usuable components
+* Built-in logging system
+* Flexible runtime system
 
 ## Messages
 
-Messages are simple JSON objects passed through the pipeline. For efficiency messages are passed
-as a single input to the component, except for single-arg components where each message will be
-passed in individually.
+Duality pipelines operate in objectMode, passing discrete JS objects as messsages. Objects
+can use any format. By convention objects may contain a key `_headers` which holds a dictionary
+of metadata to describe the message. 
 
-## Async components
+## Components
 
-Asynchronous components may invoke their callback multiple times, in which case the remainder
-of the pipeline will be executed for each call. This is useful for components which may generate
-a lot of data, like a database query, so that the pipeline can operate on batches of results
-rather than having to buffer the entire result set.
+Components are the basic unit of logic in a pipeline. Components can either generate 
+new messages, transform existing messages, or write messages to some output. Duality
+includes a set of standard components, and makes it very easy to create new ad-hoc
+components from simple functions. It's also possible to construct new re-usuable
+components by subclassing the standard classes in the Node `stream` package.
 
-## Triggers
+### Ad-hoc components
+
+To create an ad-hoc component, simply pass a function to the `use` method on a 
+Pipeline. Synchronous functions are passed each message in the pipeline, and the
+return value from the function is passed on down the pipeline:
+
+    p.use(function(msg, context) {
+    	msg.newkey = 'newvalue';
+    	return msg;
+    });
+
+If you need to return results asynchronously just define your function to take a 
+callback second argument:
+
+    p.use(function(msg, context, callback) {
+    	resource.get(function(rows) {
+    		rows.forEach(function(row) {
+    			callback(row, true);
+    		});
+    		callback(null);
+    	});
+    });
+
+Invoke the callback with output messages and pass `true` as the second argument
+until there are no more messages to generate.
+
+## The `context`
+
+The `context` is a global object available in the pipeline. It is typically used
+to pass configuration data into a component. The configuration for the pipeline
+is passed to the pipeline constructor, and becomes available under the `config`
+key in the context:
+
+    p = new Pipeline({max:10});
+    p.use(function(msg, context) {
+    	console.log("Max is: ", context.config.max);  <-- prints: Max is 10
+    });
+
+Components may add data to the context in order to share that data with other
+components. For example, the `database.Connection` components adds the database
+connection object to the context.
+
+## Running your pipeline
+
+Any pipeline can be executed by calling `run`:
+
+    p = new Pipeline();
+    ...
+    p.run();
+
+
 
 A pipeline must be started with a **trigger**. Triggers activate the pipeline, and may supply
 0 or more initial messages. The `once` trigger is good for run-once scripts, while the `timer`

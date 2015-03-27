@@ -39,8 +39,20 @@ function http_post(path, options) {
 	return run;
 }
 
+function help() {
+	console.log('Triggers are used to execute pipelines. The following \n\
+trigger types are included:\n\
+\n\
+  timer - Run a pipeline on an interval		
+
+
+
+		')
+}
+
 module.exports = {
 	once: once,
 	timer: timer,
-	http_post: http_post
+	http_post: http_post,
+	help: help
 }
