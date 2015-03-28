@@ -1,5 +1,8 @@
 # Duality
 
+[WARNING: This package is still very alpha. This mesasage will be removed when this
+thing is actually kinda ready for real work.]
+
 Duality is a framework for writing and running data transformation pipelines. Pipelines
 are built from components that use the Node.js Streams system to move data down the
 pipeline, enriching or transforming it as it goes.
