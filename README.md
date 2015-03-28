@@ -17,20 +17,20 @@ second database.
 p = new Pipeline();
 p.use(new database.Query('select * from contacts'));
 p.use(function(contact) {
-	var companyId = GUID();
-	return [
-		{
-			_headers: {type: 'person'},
-			email: contact.email,
-			name: contact.firstname + ' ' + contact.lastname
-			company_id: companyId
-		},
-		{
-			_headers: {type: 'company'},
-			name: contact.compnay_name,
-			guid: companyId
-		}
-	]
+    var companyId = GUID();
+    return [
+        {
+            _headers: {type: 'person'},
+            email: contact.email,
+            name: contact.firstname + ' ' + contact.lastname
+            company_id: companyId
+        },
+        {
+            _headers: {type: 'company'},
+            name: contact.compnay_name,
+            guid: companyId
+        }
+    ]
 });
 p.use(util.Logger());
 p.use(new database.insert(null, 'database1'));
@@ -69,20 +69,20 @@ Pipeline. Synchronous functions are passed each message in the pipeline, and the
 return value from the function is passed on down the pipeline:
 
     p.use(function(msg, context) {
-    	msg.newkey = 'newvalue';
-    	return msg;
+        msg.newkey = 'newvalue';
+        return msg;
     });
 
 If you need to return results asynchronously just define your function to take a 
 callback second argument:
 
     p.use(function(msg, context, callback) {
-    	resource.get(function(rows) {
-    		rows.forEach(function(row) {
-    			callback(row, true);
-    		});
-    		callback(null);
-    	});
+        resource.get(function(rows) {
+            rows.forEach(function(row) {
+                callback(row, true);
+            });
+            callback(null);
+        });
     });
 
 Invoke the callback with output messages and pass `true` as the second argument
@@ -95,9 +95,9 @@ to pass configuration data into a component. The configuration for the pipeline
 is passed to the pipeline constructor, and becomes available under the `config`
 key in the context:
 
-    p = new Pipeline({max:10});
+    p = new Pipeline('test max', {max:10});
     p.use(function(msg, context) {
-    	console.log("Max is: ", context.config.max);  <-- prints: Max is 10
+        console.log("Max is: ", context.config.max);  <-- prints: Max is 10
     });
 
 Components may add data to the context in order to share that data with other
@@ -112,15 +112,9 @@ Any pipeline can be executed by calling `run`:
     ...
     p.run();
 
-
-
-A pipeline must be started with a **trigger**. Triggers activate the pipeline, and may supply
-0 or more initial messages. The `once` trigger is good for run-once scripts, while the `timer`
-trigger can run a pipeline on an interval. The `http_get` and `http_post` triggers are activated
+This works for ad-hoc scripts, but Duality includes support for multiple types
+of **triggers**. Triggers activate the pipeline, and may supply
+0 or more initial messages. The `timer` trigger can run a pipeline on an 
+interval. The `http_get` and `http_post` triggers are activated
 by HTTP calls and will provide their inputs as message(s) to the pipeline.
 
-## Configuration
-
-By convention the `context` argument contains a `config` key with global configuration. Call
-`Pipeline.configure(config)` to set the configuration on the pipeline. Components may
-save values they want to re-use  (such as a db connection) on the `context` for later use.
