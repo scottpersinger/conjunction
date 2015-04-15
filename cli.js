@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 var fs     = require('fs'),
 	path   = require('path'),
-	runner = require('./lib/runner')
+	runner = require('./lib/runner'),
+	argv = require('minimist')(process.argv.slice(2))
 	;
 
 "use strict";
@@ -75,12 +76,12 @@ function new_script(args) {
 	fs.writeFileSync(f, script_template);
 }
 
-function run_script(args) {
+function run_script(args, argv) {
 	var f = args[0];
 	if (!fs.existsSync(f)) {
 		f = "scripts/" + f;
 	}
-	runner(f);
+	runner(f, argv).run();
 }
 
 if (process.argv.length < 3) {
@@ -91,21 +92,21 @@ Usage: duality <command> [options]\n\
    duality new <script>              - Creates a new script template\n\
 \n\
    duality run                       - Runs all scripts\n\
-   duality run <script>              - Runs a single script\n\
+   duality run <script>              - Runs a single script. Use -l <level> or -d to control logging\n\
 ";
 	console.log(h);      
 } else {
-	var cmd = process.argv[2];
+	var cmd = argv._[0];
 	var r = null;
 	switch (cmd) {
 		case 'create':
-			r = create_project(process.argv.slice(3));
+			r = create_project(argv._.slice(1));
 			break;
 		case 'new':
-			r = new_script(process.argv.slice(3));
+			r = new_script(argv._.slice(1));
 			break;
 		case 'run':
-			r = run_script(process.argv.slice(3));
+			r = run_script(argv._.slice(1), argv);
 			break;
 	}
 	if (r) {
